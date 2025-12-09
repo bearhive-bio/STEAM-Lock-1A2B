@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-// 如果這邊出現紅字，是正常的，StackBlitz 會自動處理
+// 如果這邊出現紅字，等一下預覽視窗會有按鈕可以修復
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -29,22 +29,22 @@ import {
 } from 'lucide-react';
 
 // --- Firebase Config & Init ---
-// ★★★ 請確認這裡已經是您的設定 ★★★
+// ★★★ 請在這裡填入您從 Firebase 後台複製的設定 ★★★
 const firebaseConfig = {
-    apiKey: "AIzaSyCJi5MPLhkSJwbjVZvxfgN-e-6WjO2n5ko",
-    authDomain: "steam-lock-1a2b.firebaseapp.com",
-    projectId: "steam-lock-1a2b",
-    storageBucket: "steam-lock-1a2b.firebasestorage.app",
-    messagingSenderId: "728514736562",
-    appId: "1:728514736562:web:4be2040aca3d61254d34ab",
-    measurementId: "G-04MGJ4Y98C"
+  apiKey: "AIzaSyCJi5MPLhkSJwbjVZvxfgN-e-6WjO2n5ko",
+  authDomain: "steam-lock-1a2b.firebaseapp.com",
+  projectId: "steam-lock-1a2b",
+  storageBucket: "steam-lock-1a2b.firebasestorage.app",
+  messagingSenderId: "728514736562",
+  appId: "1:728514736562:web:4be2040aca3d61254d34ab",
+  measurementId: "G-04MGJ4Y98C"
 };
 
 // 初始化 Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = 'class-game-001'; 
+const appId = 'class-game-001'; // 班級代號
 
 // --- Types ---
 type GameMode = 'single' | 'multi';
@@ -150,6 +150,7 @@ export default function App() {
 
   // --- Auth & Init ---
   useEffect(() => {
+    // 這裡使用匿名登入
     const initAuth = async () => {
         try {
             await signInAnonymously(auth);
@@ -165,6 +166,7 @@ export default function App() {
   // --- Leaderboard Listener ---
   useEffect(() => {
     if (!user) return;
+    // 使用簡單的查詢，避免需要複雜的索引
     const q = query(collection(db, 'leaderboard'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -307,6 +309,7 @@ export default function App() {
     if (!user) return;
     try {
       const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      // 這裡改為簡單的 collection 名稱
       await addDoc(collection(db, 'leaderboard'), {
         playerName: currentGuesserName,
         mode,
@@ -333,7 +336,7 @@ export default function App() {
     });
   }, [leaderboard, mode, leaderboardFilterDiff, leaderboardSortBy]);
 
-  // --- Chalkboard Styles ---
+  // --- Chalkboard Styles (Injecting Font) ---
   const chalkboardFont = (
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Patrick+Hand&display=swap');
@@ -380,13 +383,11 @@ export default function App() {
 
   // --- Render Sections ---
 
-  // 1. Login Screen (已置中)
   if (gameState === 'login') {
     return (
       <div className="min-h-screen bg-[#234234] flex items-center justify-center p-4 font-chalk text-white">
         {chalkboardFont}
         <div className="border-4 border-white/80 p-10 max-w-md w-full relative bg-[#2a4d3d] shadow-2xl">
-          {/* Screws */}
           <div className="absolute top-2 left-2 w-3 h-3 bg-gray-400 rounded-full border border-gray-600"></div>
           <div className="absolute top-2 right-2 w-3 h-3 bg-gray-400 rounded-full border border-gray-600"></div>
           <div className="absolute bottom-2 left-2 w-3 h-3 bg-gray-400 rounded-full border border-gray-600"></div>
@@ -420,7 +421,6 @@ export default function App() {
     );
   }
 
-  // 2. Setup Screen (已置中)
   if (gameState === 'setup') {
     return (
       <div className="min-h-screen bg-[#234234] flex items-center justify-center p-4 font-chalk text-white">
@@ -538,272 +538,263 @@ export default function App() {
     );
   }
 
-  // 3. Main Game Screen (調整為全局置中)
+  // --- Main Game Screen ---
   const isSettingAnswer = gameState === 'setting_answer';
   const isFinished = gameState === 'finished';
 
   return (
-    // 外層容器：填滿背景顏色，並設定 overflow 避免捲軸
-    <div className="min-h-screen w-full bg-[#234234] font-chalk text-white overflow-x-hidden flex flex-col items-center">
+    <div className="min-h-screen bg-[#234234] p-2 md:p-6 font-chalk text-white overflow-hidden">
       {chalkboardFont}
       {showExitConfirm && <ExitConfirmModal />}
       
-      {/* 限制最大寬度的容器 (max-w-7xl)
-        w-full: 在小螢幕時佔滿寬度
-        p-2 md:p-6: 給予邊距
-      */}
-      <div className="w-full max-w-7xl p-2 md:p-6 flex flex-col h-full min-h-screen">
+      {/* Top Bar */}
+      <div className="flex justify-between items-center mb-6 px-4 border-b border-white/20 pb-4">
+        <div className="text-xl md:text-3xl text-[#ffd6a5] flex items-center gap-2">
+            <User className="w-6 h-6" />
+            {isSettingAnswer 
+              ? `${currentSetterName} 老師出題中...` 
+              : `${currentGuesserName} 同學作答中`}
+        </div>
+        <div className="text-white/50 text-sm md:text-xl">
+            {getDifficultyText(difficulty)}
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
         
-        {/* Top Bar */}
-        <div className="flex justify-between items-center mb-6 px-4 border-b border-white/20 pb-4">
-          <div className="text-xl md:text-3xl text-[#ffd6a5] flex items-center gap-2">
-              <User className="w-6 h-6" />
-              {isSettingAnswer 
-                ? `${currentSetterName} 老師出題中...` 
-                : `${currentGuesserName} 同學作答中`}
+        {/* Left: Blackboard Area */}
+        <div className="border-[6px] border-[#5d4037] bg-[#2a4d3d] shadow-2xl relative min-h-[600px] flex flex-col p-6 rounded-sm">
+          <div className="absolute top-2 left-2 w-2 h-2 bg-[#3e2723] rounded-full opacity-50"></div>
+          <div className="absolute top-2 right-2 w-2 h-2 bg-[#3e2723] rounded-full opacity-50"></div>
+          
+          {/* Answer Display */}
+          <div className="flex justify-center gap-3 md:gap-4 my-8">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="w-16 h-20 md:w-20 md:h-24 border-2 border-white/90 flex items-center justify-center text-5xl md:text-6xl font-bold bg-white/5 relative">
+                {isSettingAnswer 
+                  ? (currentGuess[i] || '') 
+                  : (isFinished)
+                    ? answer[i] 
+                    : <span className="text-white/20 text-4xl">?</span>
+                }
+                <div className="absolute inset-0 bg-white/5 pointer-events-none"></div>
+              </div>
+            ))}
           </div>
-          <div className="text-white/50 text-sm md:text-xl">
-              {getDifficultyText(difficulty)}
+          
+          {/* Input Area */}
+          <div className="mb-6 flex flex-col items-center">
+             {isFinished ? (
+              <div className="text-center">
+                <h3 className="text-4xl text-[#9bf6ff] mb-4">下課鐘聲響起！</h3>
+                <p className="text-2xl mb-6">
+                  {history[history.length-1]?.a === 4 
+                    ? `太棒了！共猜了 ${history.length} 次，花費的總時間為 ${Math.floor(elapsedTime / 60)}分${(elapsedTime % 60).toString().padStart(2, '0')}秒`
+                    : `再接再厲！`}
+                </p>
+                <div className="flex gap-6">
+                    <button 
+                      onClick={() => setGameState('setup')}
+                      className="px-6 py-2 border border-white/50 hover:bg-white/10 rounded text-xl"
+                    >
+                      調整設定
+                    </button>
+                    <button 
+                      onClick={() => {
+                          if (mode === 'single') startGame();
+                          else setGameState('setup');
+                      }}
+                      className="px-6 py-2 bg-[#ffd6a5] text-[#234234] font-bold rounded text-xl shadow-[2px_2px_0px_white]"
+                    >
+                      再玩一次
+                    </button>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full max-w-sm relative">
+                 {/* Elapsed Time */}
+                 {!isSettingAnswer && (
+                   <div className="hidden md:flex absolute -right-32 top-1/2 -translate-y-1/2 flex-col items-center transform -rotate-3 opacity-90">
+                      <Clock className="w-8 h-8 text-[#ffd6a5] mb-1" />
+                      <div className="text-2xl font-bold text-[#ffd6a5]">
+                        {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+                      </div>
+                      <div className="text-sm text-white/50 border-t border-white/30 pt-1 mt-1">Total Time</div>
+                   </div>
+                 )}
+                 {!isSettingAnswer && (
+                   <div className="flex md:hidden justify-center items-center gap-2 mb-2 text-[#ffd6a5] opacity-90">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-lg font-bold">
+                        {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+                      </span>
+                   </div>
+                 )}
+
+                 <input 
+                   type="text" 
+                   maxLength={4}
+                   value={currentGuess}
+                   onChange={(e) => setCurrentGuess(e.target.value)}
+                   onKeyDown={(e) => { if (e.key === 'Enter') isSettingAnswer ? handleSetAnswer() : handleGuess(); }}
+                   className="w-full bg-transparent border-b-4 border-dashed border-white/30 text-center text-5xl py-2 mb-6 outline-none focus:border-[#ffadad] font-bold tracking-widest placeholder-white/10"
+                   placeholder="_ _ _ _"
+                 />
+                 <button 
+                    onClick={isSettingAnswer ? handleSetAnswer : handleGuess}
+                    className="w-full border-2 border-white/80 hover:bg-white/10 text-white text-2xl font-bold py-3 rounded-sm transition-all flex items-center justify-center gap-2"
+                 >
+                   <PenTool className="w-5 h-5" />
+                   {isSettingAnswer ? '寫在黑板上 (Set)' : '提交答案 (Guess)'}
+                 </button>
+              </div>
+            )}
+          </div>
+
+          {/* History */}
+          <div className="flex-1 overflow-y-auto border-t-2 border-white/20 pt-4 custom-scrollbar">
+            <div className="grid grid-cols-12 gap-2 text-xl text-white/50 mb-2 border-b border-white/10 pb-2 px-2">
+               <span className="col-span-2">No.</span>
+               <span className="col-span-6 text-center">Guess</span>
+               <span className="col-span-4 text-center">Result</span>
+            </div>
+            {history.map((record, idx) => (
+              <div key={idx} className="grid grid-cols-12 gap-2 text-2xl py-2 px-2 hover:bg-white/5 items-center font-bold">
+                <span className="col-span-2 text-[#a0c4ff] font-sans text-lg pt-1">#{idx + 1}</span>
+                <span className={`col-span-6 text-center tracking-widest ${record.isTimeout ? 'text-[#ffadad] line-through decoration-2' : 'text-white'}`}>
+                  {record.guess}
+                </span>
+                <span className="col-span-4 text-center">
+                   {record.isTimeout ? (
+                     <span className="text-[#ffadad] text-lg">逾時</span>
+                   ) : (
+                     <span className={`${record.a === 4 ? 'text-[#9bf6ff]' : 'text-[#ffd6a5]'}`}>
+                       {record.a}A{record.b}B
+                     </span>
+                   )}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Game Area Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
+        {/* Right: Dashboard Area */}
+        <div className="flex flex-col gap-6">
           
-          {/* Left: Blackboard Area */}
-          <div className="border-[6px] border-[#5d4037] bg-[#2a4d3d] shadow-2xl relative min-h-[600px] flex flex-col p-6 rounded-sm">
-            <div className="absolute top-2 left-2 w-2 h-2 bg-[#3e2723] rounded-full opacity-50"></div>
-            <div className="absolute top-2 right-2 w-2 h-2 bg-[#3e2723] rounded-full opacity-50"></div>
-            
-            {/* Answer Display */}
-            <div className="flex justify-center gap-3 md:gap-4 my-8">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="w-16 h-20 md:w-20 md:h-24 border-2 border-white/90 flex items-center justify-center text-5xl md:text-6xl font-bold bg-white/5 relative">
-                  {isSettingAnswer 
-                    ? (currentGuess[i] || '') 
-                    : (isFinished)
-                      ? answer[i] 
-                      : <span className="text-white/20 text-4xl">?</span>
-                  }
-                  <div className="absolute inset-0 bg-white/5 pointer-events-none"></div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Input Area */}
-            <div className="mb-6 flex flex-col items-center">
-              {isFinished ? (
-                <div className="text-center">
-                  <h3 className="text-4xl text-[#9bf6ff] mb-4">下課鐘聲響起！</h3>
-                  <p className="text-2xl mb-6">
-                    {history[history.length-1]?.a === 4 
-                      ? `太棒了！共猜了 ${history.length} 次，花費的總時間為 ${Math.floor(elapsedTime / 60)}分${(elapsedTime % 60).toString().padStart(2, '0')}秒`
-                      : `再接再厲！`}
-                  </p>
-                  <div className="flex gap-6">
-                      <button 
-                        onClick={() => setGameState('setup')}
-                        className="px-6 py-2 border border-white/50 hover:bg-white/10 rounded text-xl"
-                      >
-                        調整設定
-                      </button>
-                      <button 
-                        onClick={() => {
-                            if (mode === 'single') startGame();
-                            else setGameState('setup');
-                        }}
-                        className="px-6 py-2 bg-[#ffd6a5] text-[#234234] font-bold rounded text-xl shadow-[2px_2px_0px_white]"
-                      >
-                        再玩一次
-                      </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full max-w-sm relative">
-                  {/* Elapsed Time */}
-                  {!isSettingAnswer && (
-                    <div className="hidden md:flex absolute -right-32 top-1/2 -translate-y-1/2 flex-col items-center transform -rotate-3 opacity-90">
-                        <Clock className="w-8 h-8 text-[#ffd6a5] mb-1" />
-                        <div className="text-2xl font-bold text-[#ffd6a5]">
-                          {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
-                        </div>
-                        <div className="text-sm text-white/50 border-t border-white/30 pt-1 mt-1">Total Time</div>
-                    </div>
-                  )}
-                  {!isSettingAnswer && (
-                    <div className="flex md:hidden justify-center items-center gap-2 mb-2 text-[#ffd6a5] opacity-90">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-lg font-bold">
-                          {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
-                        </span>
-                    </div>
-                  )}
+          {/* Top Cards */}
+          <div className="grid grid-cols-2 gap-4">
+             {/* Timer */}
+             <div className="border-2 border-white/30 p-4 relative bg-[#2a4d3d]">
+               <h3 className="text-[#ffadad] text-xl flex items-center gap-2">
+                 <Timer className="w-5 h-5" /> 倒數
+               </h3>
+               <div className={`text-5xl text-center mt-2 ${useTimer && timeLeft < 10 ? 'text-[#ffadad] animate-pulse' : 'text-white'}`}>
+                 {useTimer ? `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}` : '--'}
+               </div>
+             </div>
 
-                  <input 
-                    type="text" 
-                    maxLength={4}
-                    value={currentGuess}
-                    onChange={(e) => setCurrentGuess(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') isSettingAnswer ? handleSetAnswer() : handleGuess(); }}
-                    className="w-full bg-transparent border-b-4 border-dashed border-white/30 text-center text-5xl py-2 mb-6 outline-none focus:border-[#ffadad] font-bold tracking-widest placeholder-white/10"
-                    placeholder="_ _ _ _"
-                  />
+             {/* Possibilities */}
+             <div className="border-2 border-white/30 p-4 relative bg-[#2a4d3d]">
+               <h3 className="text-[#a0c4ff] text-xl flex items-center gap-2">
+                 <Calculator className="w-5 h-5" /> 可能性
+               </h3>
+               <div className="text-5xl text-center mt-2 text-[#ffd6a5]">
+                 {isSettingAnswer ? '???' : remainingPossibilities}
+               </div>
+             </div>
+          </div>
+
+          {/* Leaderboard */}
+          <div className="flex-1 border-4 border-[#8d6e63] bg-[#fff8e1] text-[#3e2723] p-4 relative shadow-lg flex flex-col min-h-[400px]">
+             <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 shadow-md border border-red-800 z-10"></div>
+             
+             <div className="flex flex-col gap-3 mb-4 border-b-2 border-[#3e2723]/20 pb-3">
+               <div className="flex justify-between items-center">
+                 <h3 className="text-3xl font-bold flex items-center gap-2">
+                   <Trophy className="w-6 h-6 text-yellow-600" /> 榮譽榜
+                 </h3>
+                 <div className="flex gap-1">
+                   {['standard', 'challenge', 'master'].map((d: any) => (
+                     <button 
+                      key={d}
+                      onClick={() => setLeaderboardFilterDiff(d)}
+                      className={`px-2 py-1 text-sm border border-[#3e2723] ${leaderboardFilterDiff === d ? 'bg-[#3e2723] text-[#fff8e1]' : 'bg-transparent text-[#3e2723]'}`}
+                     >
+                       {d === 'standard' ? '標準' : d === 'challenge' ? '挑戰' : '大師'}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+
+               {/* Sort Toggles */}
+               <div className="flex items-center gap-2 text-sm">
+                  <span className="font-bold flex items-center gap-1"><ArrowUpDown className="w-4 h-4" /> 排序：</span>
                   <button 
-                      onClick={isSettingAnswer ? handleSetAnswer : handleGuess}
-                      className="w-full border-2 border-white/80 hover:bg-white/10 text-white text-2xl font-bold py-3 rounded-sm transition-all flex items-center justify-center gap-2"
+                    onClick={() => setLeaderboardSortBy('duration')}
+                    className={`px-3 py-0.5 rounded-full border border-[#3e2723] transition-all ${leaderboardSortBy === 'duration' ? 'bg-[#3e2723] text-white' : 'hover:bg-[#3e2723]/10'}`}
                   >
-                    <PenTool className="w-5 h-5" />
-                    {isSettingAnswer ? '寫在黑板上 (Set)' : '提交答案 (Guess)'}
+                    時間優先
                   </button>
-                </div>
-              )}
-            </div>
+                  <button 
+                    onClick={() => setLeaderboardSortBy('guessCount')}
+                    className={`px-3 py-0.5 rounded-full border border-[#3e2723] transition-all ${leaderboardSortBy === 'guessCount' ? 'bg-[#3e2723] text-white' : 'hover:bg-[#3e2723]/10'}`}
+                  >
+                    次數優先
+                  </button>
+               </div>
+             </div>
 
-            {/* History */}
-            <div className="flex-1 overflow-y-auto border-t-2 border-white/20 pt-4 custom-scrollbar">
-              <div className="grid grid-cols-12 gap-2 text-xl text-white/50 mb-2 border-b border-white/10 pb-2 px-2">
-                <span className="col-span-2">No.</span>
-                <span className="col-span-6 text-center">Guess</span>
-                <span className="col-span-4 text-center">Result</span>
-              </div>
-              {history.map((record, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 text-2xl py-2 px-2 hover:bg-white/5 items-center font-bold">
-                  <span className="col-span-2 text-[#a0c4ff] font-sans text-lg pt-1">#{idx + 1}</span>
-                  <span className={`col-span-6 text-center tracking-widest ${record.isTimeout ? 'text-[#ffadad] line-through decoration-2' : 'text-white'}`}>
-                    {record.guess}
-                  </span>
-                  <span className="col-span-4 text-center">
-                    {record.isTimeout ? (
-                      <span className="text-[#ffadad] text-lg">逾時</span>
-                    ) : (
-                      <span className={`${record.a === 4 ? 'text-[#9bf6ff]' : 'text-[#ffd6a5]'}`}>
-                        {record.a}A{record.b}B
-                      </span>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
+             <div className="overflow-y-auto flex-1 font-sans">
+               <table className="w-full text-left">
+                 <thead className="text-[#3e2723]/60 border-b border-[#3e2723]/10">
+                   <tr>
+                     <th className="pb-2 pl-2">Rank</th>
+                     <th className="pb-2">Name</th>
+                     <th className="pb-2 text-center cursor-pointer hover:text-[#3e2723]" onClick={() => setLeaderboardSortBy('guessCount')}>
+                        Guesses {leaderboardSortBy === 'guessCount' && '▼'}
+                     </th>
+                     <th className="pb-2 text-right pr-2 cursor-pointer hover:text-[#3e2723]" onClick={() => setLeaderboardSortBy('duration')}>
+                        Time {leaderboardSortBy === 'duration' && '▼'}
+                     </th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-[#3e2723]/10">
+                   {filteredLeaderboard.slice(0, 50).map((entry, idx) => (
+                     <tr key={entry.id} className="hover:bg-[#3e2723]/5">
+                       <td className="py-2 pl-2 font-bold">
+                         {idx < 3 ? ['🥇','🥈','🥉'][idx] : idx+1}
+                       </td>
+                       <td className="py-2 font-bold text-[#5d4037]">
+                         {entry.playerName}
+                         {entry.mode === 'multi' && <span className="ml-1 text-xs bg-[#5d4037] text-white px-1 rounded">2P</span>}
+                       </td>
+                       <td className={`py-2 text-center font-mono text-lg ${leaderboardSortBy === 'guessCount' ? 'font-bold bg-[#3e2723]/5' : ''}`}>
+                         {entry.guessCount}
+                       </td>
+                       <td className={`py-2 text-right pr-2 font-mono text-sm ${leaderboardSortBy === 'duration' ? 'font-bold bg-[#3e2723]/5' : ''}`}>
+                         {entry.duration}s
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+               {filteredLeaderboard.length === 0 && (
+                 <div className="text-center py-10 opacity-50">暫無資料</div>
+               )}
+             </div>
+          </div>
+          
+          {/* Back Home Button (Bottom Right) */}
+          <div className="flex justify-end mt-2">
+            <button 
+              onClick={() => setShowExitConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2 text-[#a0c4ff] hover:text-white border border-transparent hover:border-white/30 rounded transition-all text-xl"
+            >
+              <LogOut className="w-5 h-5" />
+              回到首頁
+            </button>
           </div>
 
-          {/* Right: Dashboard Area */}
-          <div className="flex flex-col gap-6">
-            
-            {/* Top Cards */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Timer */}
-              <div className="border-2 border-white/30 p-4 relative bg-[#2a4d3d]">
-                <h3 className="text-[#ffadad] text-xl flex items-center gap-2">
-                  <Timer className="w-5 h-5" /> 倒數
-                </h3>
-                <div className={`text-5xl text-center mt-2 ${useTimer && timeLeft < 10 ? 'text-[#ffadad] animate-pulse' : 'text-white'}`}>
-                  {useTimer ? `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}` : '--'}
-                </div>
-              </div>
-
-              {/* Possibilities */}
-              <div className="border-2 border-white/30 p-4 relative bg-[#2a4d3d]">
-                <h3 className="text-[#a0c4ff] text-xl flex items-center gap-2">
-                  <Calculator className="w-5 h-5" /> 可能性
-                </h3>
-                <div className="text-5xl text-center mt-2 text-[#ffd6a5]">
-                  {isSettingAnswer ? '???' : remainingPossibilities}
-                </div>
-              </div>
-            </div>
-
-            {/* Leaderboard */}
-            <div className="flex-1 border-4 border-[#8d6e63] bg-[#fff8e1] text-[#3e2723] p-4 relative shadow-lg flex flex-col min-h-[400px]">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 shadow-md border border-red-800 z-10"></div>
-              
-              <div className="flex flex-col gap-3 mb-4 border-b-2 border-[#3e2723]/20 pb-3">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-3xl font-bold flex items-center gap-2">
-                    <Trophy className="w-6 h-6 text-yellow-600" /> 榮譽榜
-                  </h3>
-                  <div className="flex gap-1">
-                    {['standard', 'challenge', 'master'].map((d: any) => (
-                      <button 
-                        key={d}
-                        onClick={() => setLeaderboardFilterDiff(d)}
-                        className={`px-2 py-1 text-sm border border-[#3e2723] ${leaderboardFilterDiff === d ? 'bg-[#3e2723] text-[#fff8e1]' : 'bg-transparent text-[#3e2723]'}`}
-                      >
-                        {d === 'standard' ? '標準' : d === 'challenge' ? '挑戰' : '大師'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Sort Toggles */}
-                <div className="flex items-center gap-2 text-sm">
-                    <span className="font-bold flex items-center gap-1"><ArrowUpDown className="w-4 h-4" /> 排序：</span>
-                    <button 
-                      onClick={() => setLeaderboardSortBy('duration')}
-                      className={`px-3 py-0.5 rounded-full border border-[#3e2723] transition-all ${leaderboardSortBy === 'duration' ? 'bg-[#3e2723] text-white' : 'hover:bg-[#3e2723]/10'}`}
-                    >
-                      時間優先
-                    </button>
-                    <button 
-                      onClick={() => setLeaderboardSortBy('guessCount')}
-                      className={`px-3 py-0.5 rounded-full border border-[#3e2723] transition-all ${leaderboardSortBy === 'guessCount' ? 'bg-[#3e2723] text-white' : 'hover:bg-[#3e2723]/10'}`}
-                    >
-                      次數優先
-                    </button>
-                </div>
-              </div>
-
-              <div className="overflow-y-auto flex-1 font-sans">
-                <table className="w-full text-left">
-                  <thead className="text-[#3e2723]/60 border-b border-[#3e2723]/10">
-                    <tr>
-                      <th className="pb-2 pl-2">Rank</th>
-                      <th className="pb-2">Name</th>
-                      <th className="pb-2 text-center cursor-pointer hover:text-[#3e2723]" onClick={() => setLeaderboardSortBy('guessCount')}>
-                          Guesses {leaderboardSortBy === 'guessCount' && '▼'}
-                      </th>
-                      <th className="pb-2 text-right pr-2 cursor-pointer hover:text-[#3e2723]" onClick={() => setLeaderboardSortBy('duration')}>
-                          Time {leaderboardSortBy === 'duration' && '▼'}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#3e2723]/10">
-                    {filteredLeaderboard.slice(0, 50).map((entry, idx) => (
-                      <tr key={entry.id} className="hover:bg-[#3e2723]/5">
-                        <td className="py-2 pl-2 font-bold">
-                          {idx < 3 ? ['🥇','🥈','🥉'][idx] : idx+1}
-                        </td>
-                        <td className="py-2 font-bold text-[#5d4037]">
-                          {entry.playerName}
-                          {entry.mode === 'multi' && <span className="ml-1 text-xs bg-[#5d4037] text-white px-1 rounded">2P</span>}
-                        </td>
-                        <td className={`py-2 text-center font-mono text-lg ${leaderboardSortBy === 'guessCount' ? 'font-bold bg-[#3e2723]/5' : ''}`}>
-                          {entry.guessCount}
-                        </td>
-                        <td className={`py-2 text-right pr-2 font-mono text-sm ${leaderboardSortBy === 'duration' ? 'font-bold bg-[#3e2723]/5' : ''}`}>
-                          {entry.duration}s
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {filteredLeaderboard.length === 0 && (
-                  <div className="text-center py-10 opacity-50">暫無資料</div>
-                )}
-              </div>
-            </div>
-            
-            {/* Back Home Button (Bottom Right) */}
-            <div className="flex justify-end mt-2">
-              <button 
-                onClick={() => setShowExitConfirm(true)}
-                className="flex items-center gap-2 px-4 py-2 text-[#a0c4ff] hover:text-white border border-transparent hover:border-white/30 rounded transition-all text-xl"
-              >
-                <LogOut className="w-5 h-5" />
-                回到首頁
-              </button>
-            </div>
-
-          </div>
         </div>
       </div>
     </div>
